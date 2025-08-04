@@ -149,7 +149,7 @@ class AssignmentParser:
                     },
                     "Category": {
                         "select": {
-                            "name": "Canvas"  # Match existing database structure
+                            "name": "Classroom"  # Match existing database structure
                         }
                     },
                     "Course": {
