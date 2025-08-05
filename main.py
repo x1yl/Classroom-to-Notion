@@ -45,7 +45,7 @@ def main(after_date=None):
             print("No date specified, using yesterday's date as default")
             print("To specify a date, run: python main.py YYYY/MM/DD")
             print("Example: python main.py 2025/8/1")
-        
+
         load_dotenv()
         cdm = ClassroomDataManager()
         ndm = NotionDatabaseManager(
@@ -54,7 +54,7 @@ def main(after_date=None):
         )
         notion_cache = NotionCache()
 
-        # Initialize AssignmentParser 
+        # Initialize AssignmentParser
         ap = AssignmentParser()
 
         # Use lowercase keys for filter criteria
@@ -71,7 +71,9 @@ def main(after_date=None):
             messages = cdm.run(after_date=after_date, filter_criteria=filter_criteria)
         else:
             # Check latest messages to see if there are any new ones
-            latest_messages = cdm.run(after_date=after_date, filter_criteria=filter_criteria)
+            latest_messages = cdm.run(
+                after_date=after_date, filter_criteria=filter_criteria
+            )
             if latest_messages:
                 # Check if any of the new messages are not in our cache
                 cached_ids = {msg["id"] for msg in email_cache}
@@ -114,19 +116,28 @@ def main(after_date=None):
                     print("-------------------------------------------------")
                     return {"message": "No new assignments to process"}
                 else:
-                    print(f"Adding {len(uncached_data)} new assignments to Notion database...")
+                    print(
+                        f"Adding {len(uncached_data)} new assignments to Notion database..."
+                    )
                     for i, assignment in enumerate(uncached_data, 1):
-                        assignment_name = assignment["properties"]["Name"]["title"][0]["text"]["content"]
+                        assignment_name = assignment["properties"]["Name"]["title"][0][
+                            "text"
+                        ]["content"]
                         print(f"  {i}. Adding: {assignment_name}")
-                    
+
                     responses = ndm.post_data(uncached_data)
-                    
+
                     # Check responses and print results
                     successful_additions = 0
                     failed_additions = 0
                     for i, response in enumerate(responses):
-                        assignment_name = uncached_data[i]["properties"]["Name"]["title"][0]["text"]["content"]
-                        if isinstance(response, dict) and response.get("object") == "page":
+                        assignment_name = uncached_data[i]["properties"]["Name"][
+                            "title"
+                        ][0]["text"]["content"]
+                        if (
+                            isinstance(response, dict)
+                            and response.get("object") == "page"
+                        ):
                             successful_additions += 1
                             print(f"  ✓ Successfully added: {assignment_name}")
                         else:
@@ -134,13 +145,19 @@ def main(after_date=None):
                             print(f"  ✗ Failed to add: {assignment_name}")
                             if isinstance(response, dict) and "message" in response:
                                 print(f"    Error: {response['message']}")
-                    
-                    print(f"\nSummary: {successful_additions} successful, {failed_additions} failed")
-                    logging.info(f"Processed {len(responses)} new assignments: {successful_additions} successful, {failed_additions} failed")
+
+                    print(
+                        f"\nSummary: {successful_additions} successful, {failed_additions} failed"
+                    )
+                    logging.info(
+                        f"Processed {len(responses)} new assignments: {successful_additions} successful, {failed_additions} failed"
+                    )
                     logging.info("Saving assignment responses to file")
                     cdm.save_to_json(responses, "outputs/new_assignments.json")
                     print("-------------------------------------------------")
-                    return {"message": f"Processed {len(responses)} new assignments: {successful_additions} successful, {failed_additions} failed"}
+                    return {
+                        "message": f"Processed {len(responses)} new assignments: {successful_additions} successful, {failed_additions} failed"
+                    }
             else:
                 logging.warning("No assignments extracted from messages")
                 return {"message": "No assignments extracted from messages"}

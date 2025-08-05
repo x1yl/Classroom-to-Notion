@@ -38,17 +38,14 @@ class ClassroomDataManager:
         if after_date is None:
             yesterday = datetime.now() - timedelta(days=1)
             after_date = yesterday.strftime("%Y/%m/%d")
-        
+
         # Search query to get ALL classroom assignment emails after the specified date
         query = f'from:no-reply@classroom.google.com subject:"New assignment:" after:{after_date}'
         print(f"Using search query: {query}")
-        
+
         try:
             results = (
-                self.service.users()
-                .messages()
-                .list(userId="me", q=query)
-                .execute()
+                self.service.users().messages().list(userId="me", q=query).execute()
             )
             messages = results.get("messages", [])
             print(f"Fetched {len(messages)} classroom assignment messages.")
@@ -126,7 +123,6 @@ class ClassroomDataManager:
                 filtered_messages.append(message)
 
         return filtered_messages
-
 
     def filter_message(self, message, criteria):
         """

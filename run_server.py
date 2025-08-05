@@ -1,3 +1,4 @@
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, BackgroundTasks, Query
 from main import main
 import uvicorn
@@ -5,7 +6,14 @@ import asyncio
 import aiohttp
 from typing import Optional
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    asyncio.create_task(schedule_sync())
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 
 async def run_sync(after_date: Optional[str] = None):
@@ -22,7 +30,9 @@ async def run_sync(after_date: Optional[str] = None):
 
 
 @app.post("/trigger-sync")
-async def trigger_sync(background_tasks: BackgroundTasks, after_date: Optional[str] = Query(None)):
+async def trigger_sync(
+    background_tasks: BackgroundTasks, after_date: Optional[str] = Query(None)
+):
     background_tasks.add_task(run_sync, after_date)
     message = "Sync task has been triggered and is running in the background. Check your Notion workspace for updates."
     if after_date:
@@ -52,11 +62,6 @@ async def schedule_sync():
                     print(f"Scheduled sync triggered. Response: {response.status}")
             except Exception as e:
                 print(f"Error triggering scheduled sync: {e}")
-
-
-@app.on_event("startup")
-async def startup_event():
-    asyncio.create_task(schedule_sync())
 
 
 @app.post("/test")

@@ -67,11 +67,12 @@ Note: If your school email doesn't allow access to Google Developers, set up ema
 
 - Open your Notion database
 - The ID is in the URL: https://www.notion.so/username/DATABASE_ID?v=...
-- Copy the DATABASE_ID part 
+- Copy the DATABASE_ID part
 
 2. Update the `NOTION_DATABASE_ID` in your `.env` file with this ID
 
 3. Make sure your Notion database has the following properties (or use the template above):
+
    - Name (Title)
    - Category (Select)
    - Course (Select)
