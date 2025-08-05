@@ -1,16 +1,19 @@
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Query
 from main import main
 import uvicorn
 import asyncio
 import aiohttp
+from typing import Optional
 
 app = FastAPI()
 
 
-async def run_sync():
+async def run_sync(after_date: Optional[str] = None):
     print("Running Classroom to Notion sync...")
+    if after_date:
+        print(f"Using date filter: after:{after_date}")
     try:
-        result = await asyncio.to_thread(main)
+        result = await asyncio.to_thread(main, after_date)
         print(result)
         return result
     except Exception as e:
@@ -19,16 +22,17 @@ async def run_sync():
 
 
 @app.post("/trigger-sync")
-async def trigger_sync(background_tasks: BackgroundTasks):
-    background_tasks.add_task(run_sync)
-    return {
-        "message": "Sync task has been triggered and is running in the background. Check your Notion workspace for updates."
-    }
+async def trigger_sync(background_tasks: BackgroundTasks, after_date: Optional[str] = Query(None)):
+    background_tasks.add_task(run_sync, after_date)
+    message = "Sync task has been triggered and is running in the background. Check your Notion workspace for updates."
+    if after_date:
+        message += f" Using date filter: after:{after_date}"
+    return {"message": message}
 
 
 @app.post("/run-sync")
-async def run_sync_endpoint():
-    result = await run_sync()
+async def run_sync_endpoint(after_date: Optional[str] = Query(None)):
+    result = await run_sync(after_date)
     return result
 
 
@@ -56,8 +60,8 @@ async def startup_event():
 
 
 @app.post("/test")
-async def test():
-    result = await run_sync()
+async def test(after_date: Optional[str] = Query(None)):
+    result = await run_sync(after_date)
     return result
 
 

@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import sys
 from dotenv import load_dotenv
 from services.classroom import ClassroomDataManager
 from services.notion import NotionDatabaseManager
@@ -32,8 +33,19 @@ def load_json_file(file_path):
         return []
 
 
-def main():
+def main(after_date=None):
     try:
+        # If no date provided as parameter, check command line argument
+        if after_date is None and len(sys.argv) > 1:
+            after_date = sys.argv[1]
+            print(f"Using date filter: after:{after_date}")
+        elif after_date is not None:
+            print(f"Using date filter: after:{after_date}")
+        else:
+            print("No date specified, using yesterday's date as default")
+            print("To specify a date, run: python main.py YYYY/MM/DD")
+            print("Example: python main.py 2025/8/1")
+        
         load_dotenv()
         cdm = ClassroomDataManager()
         ndm = NotionDatabaseManager(
@@ -56,10 +68,10 @@ def main():
         # Improved caching logic
         if len(email_cache) == 0:
             logging.info("Cache is empty, running service")
-            messages = cdm.run(max_results=20, filter_criteria=filter_criteria)
+            messages = cdm.run(after_date=after_date, filter_criteria=filter_criteria)
         else:
-            # Check last 5 messages instead of just 1 to avoid missing any
-            latest_messages = cdm.run(max_results=5, filter_criteria=filter_criteria)
+            # Check latest messages to see if there are any new ones
+            latest_messages = cdm.run(after_date=after_date, filter_criteria=filter_criteria)
             if latest_messages:
                 # Check if any of the new messages are not in our cache
                 cached_ids = {msg["id"] for msg in email_cache}
@@ -71,8 +83,8 @@ def main():
                     logging.info("No new messages. Using email_cache for data")
                     messages = email_cache
                 else:
-                    messages = cdm.run(max_results=20, filter_criteria=filter_criteria)
-                    logging.info(f"Retrieved {len(messages)} new messages")
+                    messages = latest_messages
+                    logging.info(f"Retrieved {len(messages)} messages")
             else:
                 messages = email_cache  # Fallback to cache if API call fails
 

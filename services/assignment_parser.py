@@ -1,13 +1,15 @@
 import os
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 import pytz
 from typing import List, Dict, Any
 
 
 class AssignmentParser:
     def __init__(self):
-        pass
+        # Get the system timezone
+        self.system_tz = datetime.now(timezone.utc).astimezone().tzinfo
+        print(f"Using system timezone: {self.system_tz}")
 
     def parse_date_string(self, date_str: str) -> datetime:
         """Parse various date formats that might come from classroom emails"""
@@ -74,17 +76,15 @@ class AssignmentParser:
             # Parse due date
             due_date_obj = self.parse_date_string(assignment_data.get("due_date"))
             if due_date_obj:
-                # Convert to PST timezone
-                pacific_tz = pytz.timezone("America/Los_Angeles")
-                due_date_obj = pacific_tz.localize(due_date_obj)
+                # Convert to system timezone
+                due_date_obj = due_date_obj.replace(tzinfo=self.system_tz)
                 due_date = {"start": due_date_obj.isoformat(), "end": None}
 
             # Parse posted date for date span and reminder
             posted_date_obj = self.parse_date_string(assignment_data.get("posted_date"))
             if posted_date_obj:
-                # Convert to PST timezone
-                pacific_tz = pytz.timezone("America/Los_Angeles")
-                posted_date_obj = pacific_tz.localize(posted_date_obj)
+                # Convert to system timezone
+                posted_date_obj = posted_date_obj.replace(tzinfo=self.system_tz)
                 
                 # Create date span from posted date to due date
                 if due_date and posted_date_obj:

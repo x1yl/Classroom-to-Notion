@@ -2,6 +2,7 @@ import re
 import json
 import time
 import base64
+from datetime import datetime, timedelta
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from services.google_auth import Authenticator
@@ -31,16 +32,22 @@ class ClassroomDataManager:
             self.creds = auth.create_token()
         return self.creds
 
-    def get_messages(self, max_results=100):
-        print(f"Fetching up to {max_results} messages...")
-        # Search query to get only classroom assignment emails after 8/1/25 (recent)
-        query = 'from:no-reply@classroom.google.com subject:"New assignment:" after:2025/6/1'
+    def get_messages(self, after_date=None):
+        print("Fetching all classroom assignment messages...")
+        # Default to the day before today if no date provided
+        if after_date is None:
+            yesterday = datetime.now() - timedelta(days=1)
+            after_date = yesterday.strftime("%Y/%m/%d")
+        
+        # Search query to get ALL classroom assignment emails after the specified date
+        query = f'from:no-reply@classroom.google.com subject:"New assignment:" after:{after_date}'
+        print(f"Using search query: {query}")
         
         try:
             results = (
                 self.service.users()
                 .messages()
-                .list(userId="me", maxResults=max_results, q=query)
+                .list(userId="me", q=query)
                 .execute()
             )
             messages = results.get("messages", [])
@@ -120,27 +127,6 @@ class ClassroomDataManager:
 
         return filtered_messages
 
-    def process_messages(self, max_results=100, filter_criteria=None):
-        messages = self.get_messages(max_results)
-        print(f"Total messages fetched: {len(messages)}")
-
-        processed_messages = []
-        for message in messages:
-            details = self.get_message_details(message["id"])
-            if details:
-                message = {
-                    "id": details["id"],
-                    "threadId": details["threadId"],
-                    "labelIds": details.get("labelIds", []),
-                    "snippet": details.get("snippet", ""),
-                    "payload": self.process_payload(details.get("payload", {})),
-                }
-            else:
-                print(f"Could not fetch details for message ID: {message['id']}")
-
-        print(f"Total processed messages: {len(processed_messages)}")
-
-        return processed_messages
 
     def filter_message(self, message, criteria):
         """
@@ -195,8 +181,8 @@ class ClassroomDataManager:
 
     #     return filtered_messages
 
-    def process_messages(self, max_results=100, filter_criteria=None):
-        messages = self.get_messages(max_results)
+    def process_messages(self, after_date=None, filter_criteria=None):
+        messages = self.get_messages(after_date)
         print(f"Total messages fetched: {len(messages)}")
 
         processed_messages = []
@@ -298,12 +284,12 @@ class ClassroomDataManager:
         return extracted_data
 
     def run(
-        self, max_results=100, output_file="classroom_data.json", filter_criteria=None
+        self, after_date=None, output_file="classroom_data.json", filter_criteria=None
     ):
         print("Starting ClassroomDataManager...")
         self.authenticate()
         self.service = build("gmail", "v1", credentials=self.creds)
-        processed_messages = self.process_messages(max_results, filter_criteria)
+        processed_messages = self.process_messages(after_date, filter_criteria)
         # print(processed_messages)
         if processed_messages:
             # self.save_to_json(processed_messages, output_file)
