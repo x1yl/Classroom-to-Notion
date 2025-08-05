@@ -1,10 +1,30 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, BackgroundTasks, Query
+from fastapi import FastAPI, BackgroundTasks, Query, HTTPException, Depends, Header
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from main import main
 import uvicorn
 import asyncio
 import aiohttp
-from typing import Optional
+import os
+from typing import Optional, Annotated
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Security setup
+security = HTTPBearer()
+API_SECRET = os.getenv("API_SECRET")
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify the API token"""
+    if credentials.credentials != API_SECRET:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return credentials.credentials
 
 
 @asynccontextmanager
@@ -31,7 +51,9 @@ async def run_sync(after_date: Optional[str] = None):
 
 @app.post("/trigger-sync")
 async def trigger_sync(
-    background_tasks: BackgroundTasks, after_date: Optional[str] = Query(None)
+    background_tasks: BackgroundTasks, 
+    after_date: Optional[str] = Query(None),
+    token: str = Depends(verify_token)
 ):
     background_tasks.add_task(run_sync, after_date)
     message = "Sync task has been triggered and is running in the background. Check your Notion workspace for updates."
@@ -41,7 +63,10 @@ async def trigger_sync(
 
 
 @app.post("/run-sync")
-async def run_sync_endpoint(after_date: Optional[str] = Query(None)):
+async def run_sync_endpoint(
+    after_date: Optional[str] = Query(None),
+    token: str = Depends(verify_token)
+):
     result = await run_sync(after_date)
     return result
 
@@ -53,11 +78,14 @@ async def root():
 
 async def schedule_sync():
     async with aiohttp.ClientSession() as session:
+        # Add authorization header for scheduled sync
+        headers = {"Authorization": f"Bearer {API_SECRET}"}
         while True:
             await asyncio.sleep(180)  # Wait for 3 minutes
             try:
                 async with session.post(
-                    "http://localhost:8888/trigger-sync"
+                    "http://localhost:8888/trigger-sync",
+                    headers=headers
                 ) as response:
                     print(f"Scheduled sync triggered. Response: {response.status}")
             except Exception as e:
@@ -65,7 +93,10 @@ async def schedule_sync():
 
 
 @app.post("/test")
-async def test(after_date: Optional[str] = Query(None)):
+async def test(
+    after_date: Optional[str] = Query(None),
+    token: str = Depends(verify_token)
+):
     result = await run_sync(after_date)
     return result
 

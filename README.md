@@ -57,7 +57,10 @@ pip install -r requirements.txt
   NOTION_TOKEN=your_notion_api_token
   NOTION_DATABASE_ID=your_notion_database_id
   CALENDAR_ACCOUNT=your_gmail_account
+  API_SECRET=your-secure-api-key-here
   ```
+
+**Important**: Generate a strong, random API secret for server authentication. This protects your API endpoints from unauthorized access.
 
 Note: If your school email doesn't allow access to Google Developers, set up email forwarding to a personal email address that you can use for API access.
 
@@ -129,22 +132,31 @@ The server runs on `http://localhost:8888` and provides these endpoints:
 
 ### API Endpoints:
 
-- **GET /** - Server status check
-- **POST /run-sync** - Run sync and wait for results
-- **POST /trigger-sync** - Start sync in background
-- **GET /health** - Health check
+- **GET /** - Server status check (no auth required)
+- **POST /run-sync** - Run sync and wait for results (requires auth)
+- **POST /trigger-sync** - Start sync in background (requires auth)
+- **POST /test** - Test endpoint (requires auth)
+- **GET /health** - Health check (no auth required)
 
-### Using with date parameters:
+### Authentication:
+
+All sync endpoints require Bearer token authentication. Include your API secret in the Authorization header:
 
 ```bash
-# Default (yesterday's date)
-curl -X POST http://localhost:8888/run-sync
+# Set your API secret
+export API_SECRET="your-secure-api-key-here"
 
-# With custom date
-curl -X POST "http://localhost:8888/run-sync?after_date=2025/8/1"
+# Default (yesterday's date) with authentication
+curl -X POST "http://localhost:8888/run-sync" \
+  -H "Authorization: Bearer $API_SECRET"
 
-# Background sync with date
-curl -X POST "http://localhost:8888/trigger-sync?after_date=2025/7/15"
+# With custom date and authentication
+curl -X POST "http://localhost:8888/run-sync?after_date=2025/8/1" \
+  -H "Authorization: Bearer $API_SECRET"
+
+# Background sync with date and authentication
+curl -X POST "http://localhost:8888/trigger-sync?after_date=2025/7/15" \
+  -H "Authorization: Bearer $API_SECRET"
 ```
 
 ## Scheduling
@@ -162,6 +174,21 @@ python run_server.py
 ```
 
 You can also set up a cron job to run `python main.py` at regular intervals with specific date parameters.
+
+## Security
+
+The web server uses Bearer token authentication to protect API endpoints:
+
+- **API Secret**: Set `API_SECRET` in your `.env` file
+- **Protected Endpoints**: All sync operations require authentication
+- **Public Endpoints**: Only status checks (`/`, `/health`) are public
+- **Token Format**: Use `Authorization: Bearer YOUR_API_SECRET` header
+
+**Security Best Practices:**
+- Use a strong, randomly generated API secret (32+ characters)
+- Keep your `.env` file secure and never commit it to version control
+- Use HTTPS in production environments
+- Regularly rotate your API secret
 
 ## Project Structure
 
