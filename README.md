@@ -39,7 +39,7 @@ pip install -r requirements.txt
 - Note down the API key provided
 - Share your Notion database with the integration
 - For more details, check out [Notion's guide on creating integrations](https://developers.notion.com/docs/create-a-notion-integration)
-- You can use this [Notion Database Template](https://gossamer-petroleum-c65.notion.site/24583b2b4d1280ba958ddd237a5679c3?v=24583b2b4d128172b330000cbe9042de&source=copy_link) as a starting point
+- You can use this [Notion Database Template](https://classroom-template.notion.site/24583b2b4d1280ba958ddd237a5679c3?v=24583b2b4d128172b330000cbe9042de) as a starting point
 
 4. Set up Gmail API:
 
