@@ -1,6 +1,5 @@
 import os
 import os.path
-import json
 from datetime import datetime, timezone, timedelta
 
 from google.auth.transport.requests import Request
@@ -23,14 +22,7 @@ class Authenticator:
         load_dotenv()
 
         creds = None
-        token_env_json = os.getenv("GOOGLE_AUTH_TOKEN_JSON")
-        if token_env_json:
-            try:
-                info = json.loads(token_env_json)
-                creds = Credentials.from_authorized_user_info(info, self.SCOPES)
-            except Exception:
-                creds = None
-        elif os.path.exists(self.token_file):
+        if os.path.exists(self.token_file):
             creds = Credentials.from_authorized_user_file(self.token_file, self.SCOPES)
         
         now = datetime.now(timezone.utc)
@@ -86,10 +78,9 @@ class Authenticator:
                 )
                 creds = flow.run_local_server(port=0)
 
-            if not token_env_json:
-                try:
-                    with open(self.token_file, "w") as token:
-                        token.write(creds.to_json())
-                except Exception:
-                    pass
+            try:
+                with open(self.token_file, "w") as token:
+                    token.write(creds.to_json())
+            except Exception:
+                pass
         return creds
