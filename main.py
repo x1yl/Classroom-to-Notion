@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import pathlib
 import sys
 from dotenv import load_dotenv
 from services.classroom import ClassroomDataManager
@@ -8,11 +9,28 @@ from services.notion import NotionDatabaseManager
 from services.assignment_parser import AssignmentParser
 from services.cache_manager import NotionCache
 
-# Set up logging
+# Set up logging: default to stdout (serverless-friendly). Optional file logging via env.
+log_to_file = os.getenv("LOG_TO_FILE", "false").lower() in ("1", "true", "yes")
+handlers = []
+if log_to_file:
+    log_path = os.getenv("LOG_FILE_PATH", "classroom_to_notion.log")
+    try:
+        # Ensure parent dir exists when path has dirs
+        parent = pathlib.Path(log_path).parent
+        if str(parent) not in (".", ""):
+            parent.mkdir(parents=True, exist_ok=True)
+        file_handler = logging.FileHandler(log_path)
+        handlers.append(file_handler)
+    except Exception:
+        # Fall back to stdout if file is not writable
+        handlers.append(logging.StreamHandler(sys.stdout))
+else:
+    handlers.append(logging.StreamHandler(sys.stdout))
+
 logging.basicConfig(
-    filename="classroom_to_notion.log",
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=handlers,
 )
 
 

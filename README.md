@@ -63,11 +63,14 @@ pip install -r requirements.txt
   TOKEN_EARLY_REFRESH_MINUTES=10
   TOKEN_MAX_AGE_DAYS=7
   TOKEN_FORCE_REAUTH_ON_MAX_AGE=true
+  LOG_TO_FILE=true
+  LOG_FILE_PATH=classroom_to_notion.log
   ```
 
 6. Setup up for platforms like Vercel:
 
 - Add `GOOGLE_AUTH_TOKEN_JSON` to your environment variables containing the contents of token.json
+- Set `LOG_TO_FILE` to false 
 
 **Important**: Generate a strong, random API secret for server authentication. This protects your API endpoints from unauthorized access.
 
