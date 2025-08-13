@@ -27,9 +27,6 @@ class ClassroomDataManager:
     def authenticate(self):
         auth = Authenticator(self.credentials_file)
         self.creds = auth.get_credentials()
-        if not self.creds:
-            print("No valid credentials found.")
-            self.creds = auth.create_token()
         return self.creds
 
     def get_messages(self, after_date=None):

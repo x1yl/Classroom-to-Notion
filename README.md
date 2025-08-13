@@ -58,7 +58,16 @@ pip install -r requirements.txt
   NOTION_DATABASE_ID=your_notion_database_id
   CALENDAR_ACCOUNT=your_gmail_account
   API_SECRET=your-secure-api-key-here
+
+  #optional variables
+  TOKEN_EARLY_REFRESH_MINUTES=10
+  TOKEN_MAX_AGE_DAYS=7
+  TOKEN_FORCE_REAUTH_ON_MAX_AGE=true
   ```
+
+6. Setup up for platforms like Vercel:
+
+- Add `GOOGLE_AUTH_TOKEN_JSON` to your environment variables containing the contents of token.json
 
 **Important**: Generate a strong, random API secret for server authentication. This protects your API endpoints from unauthorized access.
 

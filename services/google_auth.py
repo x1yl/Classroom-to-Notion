@@ -1,10 +1,14 @@
+import os
 import os.path
+import json
+from datetime import datetime, timezone, timedelta
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from dotenv import load_dotenv
 
 # If modifying these scopes, delete the file token.json.
 
@@ -16,60 +20,76 @@ class Authenticator:
         self.SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
     def get_credentials(self):
+        load_dotenv()
+
         creds = None
-        if os.path.exists(self.token_file):
+        token_env_json = os.getenv("GOOGLE_AUTH_TOKEN_JSON")
+        if token_env_json:
+            try:
+                info = json.loads(token_env_json)
+                creds = Credentials.from_authorized_user_info(info, self.SCOPES)
+            except Exception:
+                creds = None
+        elif os.path.exists(self.token_file):
             creds = Credentials.from_authorized_user_file(self.token_file, self.SCOPES)
-        if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
+        
+        now = datetime.now(timezone.utc)
+
+        try:
+            early_refresh_minutes = int(os.getenv("TOKEN_EARLY_REFRESH_MINUTES", "0") or 0)
+        except ValueError:
+            early_refresh_minutes = 0
+
+        max_age_days_raw = os.getenv("TOKEN_MAX_AGE_DAYS")
+        try:
+            max_age_days = int(max_age_days_raw) if max_age_days_raw else None
+        except ValueError:
+            max_age_days = None
+
+        force_reauth_on_max_age = (
+            os.getenv("TOKEN_FORCE_REAUTH_ON_MAX_AGE", "true").lower() in ("1", "true", "yes", "y")
+        )
+
+        need_early_refresh = False
+        max_age_exceeded = False
+
+        if creds and creds.expiry and early_refresh_minutes > 0:
+            expiry = creds.expiry
+            if expiry.tzinfo is None:
+                expiry = expiry.replace(tzinfo=timezone.utc)
+            effective_expiry = expiry - timedelta(minutes=early_refresh_minutes)
+            if now >= effective_expiry:
+                need_early_refresh = True
+
+        if max_age_days is not None and os.path.exists(self.token_file):
+            token_mtime = datetime.fromtimestamp(os.path.getmtime(self.token_file), tz=timezone.utc)
+            if now >= token_mtime + timedelta(days=max_age_days):
+                max_age_exceeded = True
+
+        if not creds or not creds.valid or need_early_refresh or max_age_exceeded:
+            if max_age_exceeded and force_reauth_on_max_age:
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    self.credentials_file, self.SCOPES
+                )
+                creds = flow.run_local_server(port=0)
+            elif creds and creds.refresh_token:
+                try:
+                    creds.refresh(Request())
+                except Exception:
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        self.credentials_file, self.SCOPES
+                    )
+                    creds = flow.run_local_server(port=0)
             else:
                 flow = InstalledAppFlow.from_client_secrets_file(
                     self.credentials_file, self.SCOPES
                 )
                 creds = flow.run_local_server(port=0)
-            with open(self.token_file, "w") as token:
-                token.write(creds.to_json())
+
+            if not token_env_json:
+                try:
+                    with open(self.token_file, "w") as token:
+                        token.write(creds.to_json())
+                except Exception:
+                    pass
         return creds
-
-    def create_token():
-        """Shows basic usage of the Gmail API.
-        Lists the user's Gmail labels.
-        """
-        creds = None
-        # The file token.json stores the user's access and refresh tokens, and is
-        # created automatically when the authorization flow completes for the first
-        # time.
-        if os.path.exists("token.json"):
-            creds = Credentials.from_authorized_user_file("token.json", SCOPES)
-        # If there are no (valid) credentials available, let the user log in.
-        if not creds or not creds.valid:
-            print("No valid credentials found.")
-            if creds and creds.expired and creds.refresh_token:
-                print("Refreshing expired credentials...")
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", SCOPES
-                )
-                creds = flow.run_local_server(port=0)
-            # Save the credentials for the next run
-            with open("token.json", "w") as token:
-                token.write(creds.to_json())
-
-        try:
-            # Call the Gmail API
-            service = build("gmail", "v1", credentials=creds)
-            results = service.users().labels().list(userId="me").execute()
-            labels = results.get("labels", [])
-
-            if not labels:
-                return False
-            if labels:
-                return True
-
-        except HttpError as error:
-            # TODO(developer) - Handle errors from gmail API.
-            print(f"An error occurred: {error}")
-
-    if __name__ == "__main__":
-        main()
