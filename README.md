@@ -58,6 +58,7 @@ pip install -r requirements.txt
   NOTION_DATABASE_ID=your_notion_database_id
   CALENDAR_ACCOUNT=your_gmail_account
   API_SECRET=your-secure-api-key-here
+  API_URL=http://localhost:8888
 
   #optional variables
   TOKEN_EARLY_REFRESH_MINUTES=10
@@ -71,6 +72,7 @@ pip install -r requirements.txt
 
 - Add `GOOGLE_AUTH_TOKEN_JSON` to your environment variables containing the contents of token.json
 - Set `LOG_TO_FILE` to false 
+- Change `API_URL` to the link of the application
 
 **Important**: Generate a strong, random API secret for server authentication. This protects your API endpoints from unauthorized access.
 

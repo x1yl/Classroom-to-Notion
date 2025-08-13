@@ -84,7 +84,7 @@ async def schedule_sync():
             await asyncio.sleep(180)  # Wait for 3 minutes
             try:
                 async with session.post(
-                    "http://localhost:8888/trigger-sync",
+                    f"${{API_URL}}/trigger-sync",
                     headers=headers
                 ) as response:
                     print(f"Scheduled sync triggered. Response: {response.status}")
